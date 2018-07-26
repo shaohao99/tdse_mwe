@@ -413,51 +413,6 @@ call mpi_finalize(ierr)
 stop
 end program prop_TDSE
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-subroutine calc_source_TDSE(n,nstart,nstop,ir,pt,gt,dens_at,&
-                            prob2,gh,g)
-!... calculate source terms for march routine
-   use PropParams_TDSE
-   implicit none
-   integer, intent(in) :: n, ir, nstart, nstop
-   integer it, iw
-   real dens_at, nfilt, a2
-   real pt(nnt), prob2(nnt), filt(nnt)
-   double complex gt(nnt), gh(nnw,nnr), g(nnw,nnr)
-   double complex x_ft(nnt)
-
-!... Transform acceleration a(t) to frequency domain, multiply with sqrt(r)
-!... units conversion - 8.47842e-28 is conversion to C*cm: e*a0*100
-!... extra factor of 2 comes from double occupancy of p orbital
-!... dens_at is scaling by density of neutral atoms
-!... For harmonic source term, multiply dipole with -mu_0*w^2
-!... Since a(w) = -d(w)*w^2, multiply a(w) by mu_0*units conversion, gives
-!... factor of 1.25664e-8(H/cm) * (4.13414e16)**2
-!... The non-linear polarization is returned in units of C/cm2
-
-   ! Hann window
-   filt = 0._8
-   nfilt = nstop-nstart+2.
-   forall (it=nstart:nstop) filt(it) = 0.5*(1.-cos(2.*pi*(it-nstart+1.)/nfilt))
-
-   a2 = 2.*8.47842e-28*dens_at*1.25664e-8
-   x_ft(1:n) = a2*pt(1:n)*filt(1:n)
-   call FFTf(n,x_ft,gh(:,ir))
-   gh(1:n,ir) = gh(1:n,ir)*sqrt(rr(ir))*(4.13414e16)**2
-
-!... Define G(t,r) = e(t)*dens_e*e^2/(eps0*m_e*c^2)
-!... where dens_e = dens_at*(1.-(prob2(k))**2)
-!... gt comes in containing the electric field in atomic units
-   gt(1:n) = 3.54114e-12*(gt(1:n)*5.14225)*dens_at*(1.-(prob2(1:n))**2)
-
-!... Transform G(t,r) to frequency domain, G(w,r)
-!... Multiply with sqrt(r)
-   call FFTf(n,gt,g(:,ir))
-   g(1:n,ir) = g(1:n,ir) * sqrt(rr(ir))
-end subroutine calc_source_TDSE
-
-
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
